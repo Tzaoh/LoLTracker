@@ -21,13 +21,14 @@ class Chat():
         self.__tracked_summoners = {}
         
     def add_summoner(self, summoner_id, summoner_name, noticeable=True):
-        # if isinstance(summoner_id, int) or summoner_id.isdigit():
-        summoner_id = str(summoner_id)
-        if summoner_id.isdigit():
+        try:
+            summoner_id = int(summoner_id)
             self.__tracked_summoners[summoner_id] = Summoner(summoner_id, summoner_name, noticeable)            
+            
             return True
         
-        return False
+        except ValueError:
+            return False
         
     def del_summoner(self, summoner_id):
         item = self.__tracked_summoners.pop(summoner_id)

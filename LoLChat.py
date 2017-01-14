@@ -83,7 +83,7 @@ class LoLChat():
         # self.logger.info(groups)
         
         # ['123123123123', '123123123123', '123123123123']
-        self.roster = [int(item[3:item.index('@')]) for sublist in groups.values() for item in sublist]
+        self.roster = [int(item[3:item.index('@')]) for sublist in groups.values() for item in sublist if '@' in item]
         # self.logger.info('Invocadores agregados al chat: {}.'.format(self.roster))
 
 
