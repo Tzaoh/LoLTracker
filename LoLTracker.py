@@ -61,9 +61,13 @@ from settings import *
         Telegram Bot details.
         
     TODOs:
+        - settings.orig.py
+        - Crear un README.md
         - Alguna forma para notificar automaticamente en todos los canales cuando la nueva versión y sus cambios.
         - Probar markdown de lista de puntos con el changelog.
         - Mutear/desmutear varios invocadores, pero no todos.
+        - Metodo para saber información de en cuantos canales está invocadores y caracteristicas
+        - Modo admin
         
         - Intentar ahorrarnos la peticion a riot si existe el ID de invocador en la tabla summoners, al agregar un nuevo summoner.
         - Investigar los subscribed y unsuscribed events en clientxmpp de LoLChat (Podríamos liberar recursos y actualizar el "update_roster")
@@ -638,7 +642,7 @@ class LoLTracker():
                         # Preparamos la notificación y el botón para avisar por el chat
                         if summoner.noticeable:
                             
-                            keyboard = [[InlineKeyboardButton('¡Espérame que juego!', callback_data=summoner.id)]]
+                            keyboard = [[InlineKeyboardButton('¡Espérame que juego!', callback_data=str(summoner.id))]]
                             markup = InlineKeyboardMarkup(keyboard)
                             
                             
