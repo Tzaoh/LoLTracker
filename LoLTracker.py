@@ -7,10 +7,12 @@ from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, ChatAction
 from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
 from bs4 import BeautifulSoup
 
-from riotwatcher import RiotWatcher, EUROPE_WEST, LoLException, error_404, error_429
+from riotwatcher import RiotWatcher, LoLException, error_404, error_429
 
 from LoLChat import LoLChat
 from Chat import Chat
+
+from settings import *
 
 '''
     TrackerBot.
@@ -560,14 +562,6 @@ class LoLTracker():
                         # Delete message send in 'inQueue' state
                         pass
 
-TG_TOKEN    = ''
-LOL_SERVER  = 'chat.euw1.lol.riotgames.com'
-LOL_PORT    = 5223
-LOL_USER    = ''
-LOL_PWD     = ''
-
-RIOT_TOKEN  = ''
-RIOT_REGION = EUROPE_WEST
 if __name__ == '__main__':
     lt = LoLTracker(token=TG_TOKEN)
 
