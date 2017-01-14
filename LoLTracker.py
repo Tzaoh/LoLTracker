@@ -562,7 +562,9 @@ class LoLTracker():
     def on_send_wait(self, bot, update):
         query = update.callback_query
         chat_id = query.message.chat_id
-        summoner = self.chats[chat_id].get_summoner(query.data)
+        summoner_id = int(query.data)
+        
+        summoner = self.chats[chat_id].get_summoner(summoner_id)
         
         jid = 'sum' + str(summoner.id) + '@pvp.net'
         
