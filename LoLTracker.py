@@ -49,7 +49,8 @@ from settings import *
         - Se ha separado los ajustes de conexión a un archivo aparte para poder ignorarlos en el git.
         - Se ha actualizado los comandos de ayuda (/help) en el propio @LoLTrackerBot y con @FatherBot.
         - Se ha actualizado la descripción en (/description) y con @FatherBot.
-        
+    v0.2.2
+        -
     Requirements:
         python -m pip install telegram
         python -m pip install bs4
