@@ -564,7 +564,7 @@ class LoLTracker():
         chat_id = query.message.chat_id
         summoner = self.chats[chat_id].get_summoner(query.data)
         
-        jid = 'sum' + summoner.id + '@pvp.net'
+        jid = 'sum' + str(summoner.id) + '@pvp.net'
         
         if query.from_user.username:
             name = query.from_user.username
