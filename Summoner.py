@@ -19,7 +19,7 @@ class Summoner():
     def get_status(self):
         status = ''
         if self.gamestatus:
-            status = '{} {}'.format('✅' if self.noticeable else '❌', self.name)
+            status = '{} {}'.format('🔔' if self.noticeable else '🔕', self.name)
             
             if self.gamestatus == 'inGame' and self.gamequeuetype and self.timestamp:
                 t = time.time() - int(self.timestamp) / 1000
@@ -31,5 +31,5 @@ class Summoner():
         return status
         
     def __str__(self):
-        return '{} {} ({})'.format('✅' if self.noticeable else '❌', self.name, self.id)
+        return '{} {} ({})'.format('🔔' if self.noticeable else '🔕', self.name, self.id)
         

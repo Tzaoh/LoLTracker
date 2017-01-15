@@ -50,7 +50,12 @@ from settings import *
         - Se ha actualizado los comandos de ayuda (/help) en el propio @LoLTrackerBot y con @FatherBot.
         - Se ha actualizado la descripción en (/description) y con @FatherBot.
     v0.2.2
-        -
+        - Intentar ahorrarnos la peticion a riot si existe el ID de invocador en la tabla summoners, al agregar un nuevo summoner.
+        - Se han cambiado los iconos de mute y unmute para que sean mas ilustrativos.
+        - Creamos settings.orig.py.
+        - Creamos README.md para el repositorio de github.
+        - Añadida constante con el número de versión.
+        
     Requirements:
         python -m pip install telegram
         python -m pip install bs4
@@ -58,21 +63,18 @@ from settings import *
         python -m pip install sleekxmpp
         python -m pip install dnspython
 
-        League of Legends AUXILIARY account.
+        League of Legends account.
         Telegram Bot details.
         
     TODOs:
-        - settings.orig.py
-        - Crear un README.md
+        - Rellenar README.md
+        - Quizás estaría un poco mejor la parte de los invocadores cacheados (self.summoners) en el método __load_settings().
         - Alguna forma para notificar automaticamente en todos los canales cuando la nueva versión y sus cambios.
         - Probar markdown de lista de puntos con el changelog.
         - Mutear/desmutear varios invocadores, pero no todos.
         - Metodo para saber información de en cuantos canales está invocadores y caracteristicas
         - Modo admin
-        
-        - Intentar ahorrarnos la peticion a riot si existe el ID de invocador en la tabla summoners, al agregar un nuevo summoner.
-        - Investigar los subscribed y unsuscribed events en clientxmpp de LoLChat (Podríamos liberar recursos y actualizar el "update_roster")
-            https://github.com/fritzy/SleekXMPP/wiki/Roster-Management
+        - Investigar los subscribed y unsuscribed events en clientxmpp de LoLChat (Podríamos liberar recursos y actualizar el "update_roster"). https://github.com/fritzy/SleekXMPP/wiki/Roster-Management
         - Funcionalidad de Borrar mensaje de aviso de en cola cuando lo implementen en la API BOT de telegram. L(392)
         - SPAM(?)
         
@@ -81,11 +83,11 @@ from settings import *
 '''
 
 class LoLTracker():
+    VERSION = 'v0.2.2'
     
     DESCRIPTION = (
-        "TrackerBot v0.2.0.\n"
-        "=================\n\n"
-        
+        "TrackerBot " + VERSION + ".\n"
+        "=================\n"
         "Hace seguimiento del estado de invocadores de League of Legends. "
         "Se conecta tanto al chat del cliente del League of Legends como a un chat de Telegram, enviando"
         "información sobre el primero al segundo cuando se le requiera.\n\n"
@@ -123,7 +125,15 @@ class LoLTracker():
             "   - Se ha añadido un nuevo comando (/last_changes) para mostrar los cambios de la última versión.\n"  +
             "   - Se ha separado los ajustes de conexión a un archivo aparte para poder ignorarlos en el git.\n"    +
             "   - Se ha actualizado los comandos de ayuda (/help) en el propio @LoLTrackerBot y con @FatherBot.\n"  +
-            "   - Se ha actualizado la descripción en (/description) y con @FatherBot."
+            "   - Se ha actualizado la descripción en (/description) y con @FatherBot.\n",
+            
+            "v0.2.2\n" +
+            "   - Se han cambiado los iconos de mute y unmute para que sean mas ilustrativos.\n"                    +
+            "   - Ahora intentamos ahorrarnos la peticion a riot si existe el invocador en la tabla summoners, "    +
+                 "al agregar un nuevo summoner (ya que esa tabla no se borra).\n"                                   +
+            "   - Creamos settings.orig.py.\n"                                                                      +
+            "   - Creamos README.md para el repositorio de github (Pendiente de rellenar).\n"                       +
+            "   - Añadida constante con el número de versión."
     ]
     
     HELP = (
@@ -179,7 +189,15 @@ class LoLTracker():
         # Handler para cuando cambia el status de algún invocador en el chat del lol
         self.lol_chat.add_handler('changed_status', self.xmpp_on_changed_status)
 
-        # Cargamos los chats e invocadores guardados
+        # Precargamos los invocadores que tenemos almacenados en la tabla de summoners.
+        # Asi evitamos pedir invocadores a la API en caso de tenerlos en la tabla.
+        self.cursor.execute('SELECT id, name FROM summoners;')
+        results = self.cursor.fetchall()
+        
+        # Generamos un diccionario con las claves el nombre del invocador en minúsculas
+        self.summoners = {summoner[1].replace(' ', '').lower(): {'id': summoner[0], 'name': summoner[1]} for summoner in results}
+        
+        # Cargamos los chats y sus respectivos invocadores.
         self.__load_settings()
         
     """ Carga los chats e invocadores asociados a cada uno de ellos. """
@@ -379,21 +397,31 @@ class LoLTracker():
         
         chat_id = update.message.chat_id
 
-        # Para los nombres con espacios
+        # Tenemos en cuenta los nombres con espacios.
         summoner_names = ' '.join(args).split(', ')
         
-        # La API no admite mas de 40 por petición
-        summoner_names = summoner_names[0:40]
+        # La API no admite mas de 40 por petición.
+        # Además vamos a quitar los espacios intermedios y convertir todo a minúsculas, ya que el usuario podría generar repeticiones con 'Tzaoh' y 'tzaoh'.
+        # A la API da el mismo resultado con 'Dain V', 'dain v' y 'dainv'.
+        summoner_names = [name.replace(' ', '').lower() for name in summoner_names[0:40]]
         
-        # Obtenemos la estructura del invocador de la API de riot.
-        summoners, error = self.__get_summoners(names=summoner_names, region=RIOT_REGION)
-
+        # Hay que comparar los nombres de la lista con los del diccionario self.summoners.
+        # Si están todos en el diccionario, nos podremos ahorrar la petición.
+        summoners = { name : {'id': self.summoners[name]['id'], 'name': self.summoners[name]['name']} for name in summoner_names if name in self.summoners }
+        error = None
+        
+        # Sino tiene el mismo número, quiere decir que hay invocadores no encontrados en nuestra base de datos local.
+        # Hacemos una petición a la API de Rito con todos. (Es lo mismo ya que se puede coger hasta 40 en una sola petición).
+        if len(summoners) != len(set(summoner_names)):
+            summoners, error = self.__get_summoners(names=summoner_names, region=RIOT_REGION)
+            self.logger.info('No se han encontrado todos los invocadores en la tabla. Haciendo la petición a Rito.')
+        
         # Si ha habido algun error lo notificamos
         if error:
             self.__send_message(chat_id, error)
             return
         
-        # Lista de de nombres de invocadores que no tenemos añadidos como amigos en el chat del lol.
+        # Lista de de nombres de invocadores que no tenemos añadidos como amigos en el chat del LoL.
         not_subscribed = []
         
         # Lista de de nombres de invocadores que vamos a seguir (se incluyen los pendientes por aceptar amistad).
