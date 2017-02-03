@@ -50,21 +50,33 @@ v0.2.1
 	- Se ha actualizado los comandos de ayuda (/help) en el propio @LoLTrackerBot y con @FatherBot.
 	
 	- Se ha actualizado la descripción en (/description) y con @FatherBot.
+	
 v0.2.2
+
 	- Intentar ahorrarnos la peticion a riot si existe el ID de invocador en la tabla summoners, al agregar un nuevo summoner.
+	
 	- Se han cambiado los iconos de mute y unmute para que sean mas ilustrativos.
+	
 	- Creamos settings.orig.py.
+	
 	- Creamos README.md para el repositorio de github.
+	
 	- Añadida constante con el número de versión.
 
 Requirements:
+
 	python -m pip install telegram
+	
 	python -m pip install bs4
+	
 	python -m pip install riotwatcher
+	
 	python -m pip install sleekxmpp
+	
 	python -m pip install dnspython
 
     League of Legends account.
+	
     Telegram Bot details.
     
 TODOs:
