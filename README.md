@@ -1,5 +1,5 @@
-TrackerBot.
-
+TrackerBot
+---
 Bot de Telegram para hacer seguimiento del estado de invocadores de League of Legends.
 Se conecta tanto al chat del cliente del League of Legends como a un chat de Telegram, enviando
 información sobre el primero al segundo cuando se le requiera.
@@ -9,20 +9,16 @@ en cola, dando la opción a la gente de Telegram a enviarle un mensaje al chat d
 les espere para jugar.
 
 Requirements:
-
-	python -m pip install telegram
-	
-	python -m pip install bs4
-	
-	python -m pip install riotwatcher
-	
-	python -m pip install sleekxmpp
-	
-	python -m pip install dnspython
-
-    League of Legends account.
-	
-    Telegram Bot details.
+---
+```bash
+# python -m pip install telegram
+# python -m pip install bs4
+# python -m pip install riotwatcher
+# python -m pip install sleekxmpp
+# python -m pip install dnspython
+```
+League of Legends account.
+Telegram Bot details.
     
 TODOs:
 ---
