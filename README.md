@@ -26,15 +26,13 @@ Requirements:
     
 TODOs:
 ---
-* Rellenar README.md
+* Mostrar campeón que se está jugando
+* El campo del nombre de la conversación no se guarda bien
 * Quizás estaría un poco mejor la parte de los invocadores cacheados (self.summoners) en el método __load_settings().
 * Alguna forma para notificar automaticamente en todos los canales cuando la nueva versión y sus cambios.
-* Probar markdown de lista de puntos con el changelog.
 * Mutear/desmutear varios invocadores, pero no todos.
 * Metodo para saber información de en cuantos canales está invocadores y caracteristicas
-* Modo admin
-* Investigar los subscribed y unsuscribed events en clientxmpp de LoLChat (Podríamos liberar recursos y actualizar el "update_roster"). https://github.com/fritzy/SleekXMPP/wiki/Roster-Management
 * Funcionalidad de Borrar mensaje de aviso de en cola cuando lo implementen en la API BOT de telegram. L(392)
+* Modo admin (?)
 * SPAM(?)
 * Al añadir un nuevo invocador, no busca su estado, solo cuando cambia
-* Que salga el tiempo que se esta en cola (?)
