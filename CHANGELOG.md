@@ -1,9 +1,13 @@
 v0.2.2
 
 	* Intentar ahorrarnos la peticion a riot si existe el ID de invocador en la tabla summoners, al agregar un nuevo summoner.
+	
 	* Se han cambiado los iconos de mute y unmute para que sean mas ilustrativos.
+	
 	* Creamos settings.orig.py.
+	
 	* Creamos README.md para el repositorio de github.
+	
 	* Añadida constante con el número de versión.
 
 v0.2.1
