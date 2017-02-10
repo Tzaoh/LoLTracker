@@ -22,7 +22,8 @@ Telegram Bot details.
     
 TODOs:
 ---
-* Decoradores para métodos de administrador modo admin (?)
+* Dejar de mostrar el IDs de invocador
+* Decorador para métodos de administrador modo admin (?)
 * Mostrar campeón que se está jugando
 * El campo del nombre de la conversación no se guarda bien
 * Quizás estaría un poco mejor la parte de los invocadores cacheados (self.summoners) en el método __load_settings().
