@@ -55,6 +55,8 @@ from settings import *
         - Creamos settings.orig.py.
         - Creamos README.md para el repositorio de github.
         - Añadida constante con el número de versión.
+    v0.2.3
+        - Corregida la descripción.
         
     Requirements:
         python -m pip install telegram
@@ -67,6 +69,9 @@ from settings import *
         Telegram Bot details.
         
     TODOs:
+        - Modo admin
+        - Mejor tratamiento de los datos del método /add. cortamos por las comas (aunque haya espacios) y pasamos un replace (' ', '') ademas de convertir a minúsculas.
+        - Títulos internos para conversaciones individuales El nombre del otro de la otra persona de la conversacion conversador.
         - Rellenar README.md
         - Quizás estaría un poco mejor la parte de los invocadores cacheados (self.summoners) en el método __load_settings().
         - Alguna forma para notificar automaticamente en todos los canales cuando la nueva versión y sus cambios.
@@ -89,11 +94,11 @@ class LoLTracker():
         "TrackerBot " + VERSION + ".\n"
         "=================\n"
         "Hace seguimiento del estado de invocadores de League of Legends. "
-        "Se conecta tanto al chat del cliente del League of Legends como a un chat de Telegram, enviando"
+        "Se conecta tanto al chat del cliente del League of Legends como a un chat de Telegram, enviando "
         "información sobre el primero al segundo cuando se le requiera.\n\n"
         
-        "Adicionalmente, informará cuando uno de los invocadores a los que se le haga el seguimiento entre"
-        "en cola, dando la opción a la gente de Telegram a enviarle un mensaje al chat de LoL para que"
+        "Adicionalmente, informará cuando uno de los invocadores a los que se le haga el seguimiento entre "
+        "en cola, dando la opción a la gente de Telegram a enviarle un mensaje al chat de LoL para que "
         "les espere para jugar."
     )
     
@@ -293,7 +298,7 @@ class LoLTracker():
         
         return result
         
-    """ Función para conectar el bot a telegram """
+    """ Función para conectar el bot a telegram. """
     def connect(self):
         self.lol_chat.connect()
 
@@ -581,7 +586,7 @@ class LoLTracker():
             
             self.__send_message(chat_id, self.__list_summoners(chat_id))
 
-    """ Devuelve el ID del chat """
+    """ Devuelve el ID del chat. """
     def on_chat_id(self, bot, update):
         chat_id = update.message.chat_id
         self.__send_message(chat_id, str(chat_id))
