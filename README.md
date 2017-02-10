@@ -22,6 +22,7 @@ Telegram Bot details.
     
 TODOs:
 ---
+* Decoradores para métodos de administrador modo admin (?)
 * Mostrar campeón que se está jugando
 * El campo del nombre de la conversación no se guarda bien
 * Quizás estaría un poco mejor la parte de los invocadores cacheados (self.summoners) en el método __load_settings().
@@ -29,6 +30,5 @@ TODOs:
 * Mutear/desmutear varios invocadores, pero no todos.
 * Metodo para saber información de en cuantos canales está invocadores y caracteristicas
 * Funcionalidad de Borrar mensaje de aviso de en cola cuando lo implementen en la API BOT de telegram. L(392)
-* Modo admin (?)
 * SPAM(?)
 * Al añadir un nuevo invocador, no busca su estado, solo cuando cambia
