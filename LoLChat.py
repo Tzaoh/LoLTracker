@@ -1,9 +1,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import logging, sleekxmpp, dns, threading
+import logging
+import sleekxmpp
+import dns
+import threading
+import sys
 
-class LoLChat():
+
+class LoLChat:
     
     def __init__(self, server, port, user, pwd, debug_level=logging.INFO):
         # Configuración de logueo
@@ -13,14 +18,14 @@ class LoLChat():
         )
         
         # Instancia del logger para guardar cosas
-        self.logger     = logging.getLogger(__name__)
+        self.logger = logging.getLogger(__name__)
         
         self.server = server
-        self.port   = port
-        self.user   = user
-        self.pwd    = pwd
+        self.port = port
+        self.user = user
+        self.pwd = pwd
         
-        self.xmpp   = sleekxmpp.ClientXMPP(
+        self.xmpp = sleekxmpp.ClientXMPP(
             self.user + '@pvp.net/xiff2',
             'AIR_' + self.pwd
         )
@@ -46,20 +51,23 @@ class LoLChat():
         
     """ Conectar al chat con los parámetros especificados """
     def connect(self):
-        serverIp = dns.resolver.query(self.server)
-        if serverIp:
-            if self.xmpp.connect((str(serverIp[0]), self.port), use_ssl=True):
+        server_ip = dns.resolver.query(self.server)
+        if server_ip:
+            if self.xmpp.connect((str(server_ip[0]), self.port), use_ssl=True):
                 self.xmpp.process(block=False)
-                self.xmpp.register_plugin("xep_0199") # XMPP Ping
-                # self.xmpp.register_plugin("xep_0045") #MUC
+                self.xmpp.register_plugin("xep_0199")  # XMPP Ping
                 
                 self.logger.debug("Connection with the server established.")
                 return True
             else:
-                self.logger.critical("Couldn't resolve the server's A record.\nAn update may be required to continue using this.")
+                self.logger.critical(
+                    "Couldn't resolve the server's A record.\nAn update may be required to continue using this."
+                )
                 sys.exit(-1)
         else:
-            self.logger.critical("Couldn't resolve the server's A record.\nAn update may be required to continue using this.")
+            self.logger.critical(
+                "Couldn't resolve the server's A record.\nAn update may be required to continue using this."
+            )
             sys.exit(-1)
     
     """ Envía un mensaje a JID (sum1234567@pvp.net) especificado. """
@@ -71,7 +79,8 @@ class LoLChat():
         self.xmpp.send_presence(pto=jid, ptype='subscribe')
     
     """ Cuando nos conectamos al chat enviamos nuestro estado y recuperamos el roster. """
-    def on_session_start(self, e):
+    # def on_session_start(self, e):
+    def on_session_start(self, _):
         self.xmpp.get_roster()
         self.xmpp.send_presence(ptype="chat", pstatus="<body></body>")
         # self.logger.info("Successfully logged in")
@@ -85,5 +94,3 @@ class LoLChat():
         # ['123123123123', '123123123123', '123123123123']
         self.roster = [int(item[3:item.index('@')]) for sublist in groups.values() for item in sublist if '@' in item]
         # self.logger.info('Invocadores agregados al chat: {}.'.format(self.roster))
-
-

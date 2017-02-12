@@ -1,14 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-
-# 250219289:AAF-zuy5zDRt5Ukw8yA1bc7Qsf7ud7ASBEs
-    
-import logging
-
 from Summoner import Summoner
 
-class Chat():
+
+class Chat:
     
     def __init__(self, id, name):        
         # Id del chat
@@ -22,27 +18,65 @@ class Chat():
         
     def add_summoner(self, summoner_id, summoner_name, noticeable=True):
         try:
+            key = summoner_name.replace(' ', '').lower()
             summoner_id = int(summoner_id)
-            self.__tracked_summoners[summoner_id] = Summoner(summoner_id, summoner_name, noticeable)            
-            
+            summoner = Summoner(summoner_id, summoner_name, noticeable)
+
+            self.__tracked_summoners[summoner_id] = summoner
+            self.__tracked_summoners[key] = summoner
+
             return True
         
         except ValueError:
             return False
-        
-    def del_summoner(self, summoner_id):
-        item = self.__tracked_summoners.pop(summoner_id)
-        return bool(item)
-    
-    def get_summoner(self, summoner_id):
-        result = None
-        if summoner_id in self.__tracked_summoners:
-            result = self.__tracked_summoners[summoner_id]
-            
+
+    def del_summoners(self, summoner_names):
+        summoner_names = [name.replace(' ', '').lower() for name in summoner_names]
+
+        if summoner_names[0] in ['*', 'all']:
+            summoners_deleted = self.__tracked_summoners
+            self.__tracked_summoners = {}
+        else:
+            summoners_deleted = self.get_summoners(summoner_names)
+            for _, summoner in summoners_deleted.items():
+                del self.__tracked_summoners[summoner.id]
+                del self.__tracked_summoners[summoner.name.replace(' ', '').lower()]
+
+        return summoners_deleted
+
+    def get_summoners(self, keys=None):
+        result = {summoner.id: summoner for key, summoner in self.__tracked_summoners.items() if not bool(keys) or
+                  key in keys}
+
         return result
     
-    def has_summoner(self, summoner_id):
-        return summoner_id in self.__tracked_summoners
-        
-    def get_tracked_summoners(self):
-        return self.__tracked_summoners
+    def has_summoner(self, key):
+        return key in self.__tracked_summoners
+
+    def mute_summoners(self, summoner_names):
+        summoner_names = [name.replace(' ', '').lower() for name in summoner_names]
+
+        if summoner_names[0] in ['*', 'all']:
+            # summoners_muted = self.get_tracked_summoners()
+            summoners_muted = self.get_summoners()
+        else:
+            summoners_muted = self.get_summoners(summoner_names)
+
+        for _, summoner in summoners_muted.items():
+            summoner.noticeable = False
+
+        return summoners_muted
+
+    def unmute_summoners(self, summoner_names):
+        summoner_names = [name.replace(' ', '').lower() for name in summoner_names]
+
+        if summoner_names[0] in ['*', 'all']:
+            # summoners_unmuted = self.get_tracked_summoners()
+            summoners_unmuted = self.get_summoners()
+        else:
+            summoners_unmuted = self.get_summoners(summoner_names)
+
+        for _, summoner in summoners_unmuted.items():
+            summoner.noticeable = True
+
+        return summoners_unmuted

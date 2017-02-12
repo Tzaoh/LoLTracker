@@ -48,3 +48,4 @@ Temporary Items
 *.pyc
 *.db
 settings.py
+.idea

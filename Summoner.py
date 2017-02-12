@@ -3,7 +3,8 @@
 
 import time
 
-class Summoner():
+
+class Summoner:
     
     def __init__(self, id, name, noticeable):
         # Estos se graban en base de datos
@@ -15,6 +16,7 @@ class Summoner():
         self.gamestatus = None
         self.gamequeuetype = None
         self.timestamp = None
+        self.champion = None
 
     def get_status(self):
         status = ''
@@ -24,12 +26,12 @@ class Summoner():
             if self.gamestatus == 'inGame' and self.gamequeuetype and self.timestamp:
                 t = time.time() - int(self.timestamp) / 1000
                 m, s = divmod(t, 60)
-                status += ": {} ({:.0f}m {:.0f}s)\n".format(self.gamequeuetype, m, s)
+                status += ": {} {} ({:.0f}m {:.0f}s)\n".format(self.champion, self.gamequeuetype, m, s)
             else:
                 status += ": {}\n".format(self.gamestatus)
             
         return status
         
     def __str__(self):
-        return '{} {} ({})'.format('🔔' if self.noticeable else '🔕', self.name, self.id)
-        
+        # return '{} {} ({})'.format('🔔' if self.noticeable else '🔕', self.name, self.id)
+        return '{} {}'.format('🔔' if self.noticeable else '🔕', self.name)

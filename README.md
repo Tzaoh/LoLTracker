@@ -16,20 +16,22 @@ Requirements:
 # python -m pip install riotwatcher
 # python -m pip install sleekxmpp
 # python -m pip install dnspython
+
+# Optionals but will throw extra-warnings while connecting XMPP server
+# python -m pip install pyasn1
+# python -m pip install pyasn1-modules
 ```
-League of Legends account.
-Telegram Bot details.
+* League of Legends account.
+* Telegram Bot details.
     
 TODOs:
 ---
-* Dejar de mostrar el IDs de invocador
-* Decorador para métodos de administrador modo admin (?)
-* Mostrar campeón que se está jugando
-* El campo del nombre de la conversación no se guarda bien
+* Algunas colas no se ven reflejadas porque su gamequeuetype es <gamequeuetype>NONE</gamequeuetype> (cola de entrenamiento)
+* Separar el método decorador a una nueva clase
+* Al añadir un nuevo invocador, no busca su estado, solo cuando cambia
+* Argumento opcional en el método de stats para detalles extensos.
 * Quizás estaría un poco mejor la parte de los invocadores cacheados (self.summoners) en el método __load_settings().
 * Alguna forma para notificar automaticamente en todos los canales cuando la nueva versión y sus cambios.
-* Mutear/desmutear varios invocadores, pero no todos.
-* Metodo para saber información de en cuantos canales está invocadores y caracteristicas
 * Funcionalidad de Borrar mensaje de aviso de en cola cuando lo implementen en la API BOT de telegram. L(392)
 * SPAM(?)
-* Al añadir un nuevo invocador, no busca su estado, solo cuando cambia
+* Como dar de baja conversaciones
