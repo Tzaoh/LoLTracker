@@ -23,7 +23,13 @@ Requirements:
 ```
 * League of Legends account.
 * Telegram Bot details.
-    
+
+Screenshots:
+---
+![List_Command](https://raw.githubusercontent.com/Tzaoh/LoLTracker/master/screenshots/list.png)
+![Mute_Command](https://raw.githubusercontent.com/Tzaoh/LoLTracker/master/screenshots/mute.png)
+![Tracked Command](https://raw.githubusercontent.com/Tzaoh/LoLTracker/master/screenshots/tracked.png)
+
 TODOs:
 ---
 * Algunas colas no se ven reflejadas porque su gamequeuetype es <gamequeuetype>NONE</gamequeuetype> (cola de entrenamiento)
