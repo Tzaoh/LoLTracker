@@ -39,7 +39,7 @@ class LoLChat:
     
         # Para esperar que se actualice el roster
         self.presences_received = threading.Event()
-        self.roster = []
+        self.roster_ids = []
 
     """ Añadir eventos. """
     def add_handler(self, event, handler):
@@ -77,9 +77,8 @@ class LoLChat:
     """ Envía una petición de amistad a un JID especificado. """
     def add_friend(self, jid):
         self.xmpp.send_presence(pto=jid, ptype='subscribe')
-    
+
     """ Cuando nos conectamos al chat enviamos nuestro estado y recuperamos el roster. """
-    # def on_session_start(self, e):
     def on_session_start(self, _):
         self.xmpp.get_roster()
         self.xmpp.send_presence(ptype="chat", pstatus="<body></body>")
@@ -89,8 +88,6 @@ class LoLChat:
 
         # diccionario tipo {'nombre de grupo': ['sum123123123@pvp.net', ''], '': [], ... }
         groups = self.xmpp.client_roster.groups()
-        # self.logger.info(groups)
-        
-        # ['123123123123', '123123123123', '123123123123']
-        self.roster = [int(item[3:item.index('@')]) for sublist in groups.values() for item in sublist if '@' in item]
-        # self.logger.info('Invocadores agregados al chat: {}.'.format(self.roster))
+
+        self.roster_ids = [int(item[3:item.index('@')]) for sublist in groups.values() for item in sublist if '@'
+                           in item]

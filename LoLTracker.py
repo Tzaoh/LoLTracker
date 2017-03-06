@@ -3,10 +3,17 @@
 
 import logging
 import sqlite3
+import time
+import os
+import sys
+import json
+# import utils
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ChatAction, ParseMode
-from telegram.ext import Updater, CommandHandler, CallbackQueryHandler
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ChatAction, ParseMode,\
+    InlineQueryResultArticle, InputTextMessageContent
+from telegram.ext import Updater, CommandHandler, CallbackQueryHandler, InlineQueryHandler
 from bs4 import BeautifulSoup
+from uuid import uuid4
 
 from riotwatcher import RiotWatcher, LoLException, error_404, error_429
 
@@ -14,22 +21,14 @@ from LoLChat import LoLChat
 from Chat import Chat
 
 from settings import *
-
-
-def owner(func):
-    def owner_and_call(*args, **kwargs):
-        update = args[2]
-        if OWNER_ID == update.message.from_user.id:
-            return func(*args, **kwargs)
-        # raise Exception('Authentication Failed.')
-    return owner_and_call
+from decorators import *
 
 
 class LoLTracker:
-    VERSION = 'v0.2.3'
+    VERSION = 'v0.2.4'
 
     DESCRIPTION = (
-        "TrackerBot " + VERSION + ".\n"
+        "TrackerBot " + VERSION + "\n"
         "=================\n"
         "Hace seguimiento del estado de invocadores de League of Legends. "
         "Se conecta tanto al chat del cliente del League of Legends como a un chat de Telegram, enviando "
@@ -41,63 +40,83 @@ class LoLTracker:
     )
 
     CHANGELOG = [
-            "v0.1.0\n" +
-            "    - Release inicial.\n",
+        "v0.2.4\n"
+        "   - Nuevo método (/restart) para reiniciar el bot, sólo disponible para el dueño @owner.\n"
+        "   - Nuevo método (/say) para hablar con un invocador al que se hace seguimiento desde el chat. También es "
+        "posible hacerlo desde el modo inline.\n"
+        "   - Corregido mensaje de estadísticas y añadidas estadísticas extras utilizando el argumento extended.\n"
+        "   - Decoradores pasados a un archivo externo.\n"
+        "   - Se ha creado un nuevo decorador de funciones para ejecutarlas sólo si son llamadas desde en sólo en chats"
+        " privados (no en grupos).\n"
+        "   - Método __list_summoners eliminado.\n"
+        "   - Manejador para diferentes eventos de callbacks.\n"
+        "   - Nuevo archivo utils.py para separar funciones auxiliares.\n"
+        "   - Se ha corregido un error por el que no aparecía el nombre del campeón de un jugador que estuviera en"
+        "partida mediante el comando /tracked. Esto era debido a que el campo que informaba del campeón no existe en"
+        "la versión del cliente antigua.\n"
+        "   - Ahora se proporciona en la descripción de los correspondientes comandos si son de uso privado "
+        "(no en conversaciones de grupo) o sólo por el owner.\n"
+        "   - Ahora, al conectar el bot, se notifica automáticamente en todos los canales si hay una nueva versión"
+        "y sus cambios."
+        "   - Ahora al enviar el log de cambios se envia un mensaje por cada version, ya que todos juntos supera la"
+        "longitud máxima de 4096 bytes.\n",
 
-            "v0.1.1\n"
-            "    - Añadido función anti-spam para que no mande mensajes de \"<Summoner> en cola\" continuamente.\n"
-            "    - Parametrizadas unas constantes para hacer mas rapido el despliegue entre entorno de "
-            "desarrollo y producción.\n",
+        "v0.2.3\n"
+        "   - Descripción corregida.\n"
+        "   - Añadido soporte para funciones administrativas. Para utilizarlas tan sólo hay que añadir el decorador"
+        "@owner al principio del método.\n"
+        "   - Aplicados estilos de convención PEP 8 en parte del código.\n"
+        "   - Ahora se muestra el campeón que se está jugando.\n"
+        "   - Un campo interno de la base de datos (titulo de conversacion) no se guardaba correctamente al iniciar"
+        "el bot (/start). Esto era debido a que no consideraba que algunos campos pudieran ser opcionales..\n"
+        "   - El diccionario de invocadores de cada chat tendra dos entradas por cada invocador, una con su ID de"
+        "invocador y otra con su nombre normalizado (lowercase sin espacios). Puesto que su valor es un puntero a"
+        "la misma clase, los cambios de una estarán sincronizados con la otra.\n"
+        "   - Las operaciones sobre todos los invocadores todos se pueden hacer con los comodines 'all' y '*'.\n"
+        "   - Mover la lógica de mutear, desmutear y borrar invocadores de un chat a la clase Chat.py.\n"
+        "   - Mas genericas las funciones de Chat.py de get_summoner (quitar get_summoner_by_name y by id).\n"
+        "   - Dejar de mostrar el IDs de invocador, ya que al hacer las operaciones basándonos en el nombre ya"
+        "no debería ser necesario..\n"
+        "   - Poder Mutear/desmutear varios invocadores, pero no todos.\n"
+        "   - Combinar get_tracked_summoners y get_summoners.\n"
+        "   - Se ha cambiado la ayuda del bot para reflejar los cambios en los argumentos realizados (* all etc).",
 
-            "v0.2.0\n"
-            "    - Versión reconstruida desde cero.\n"
-            "    - Se ha eliminado la función anti-spam por no poder afinarse adecuadamente por falta de datos. "
-            "Ahora se pueden silenciar las notificaciones por invocador o para todos los invocadores del "
-            "canal especifco desde el que se envie la orden /mute <summoner ID> o /mute all\n"
-            "    - Se guardan los ajustes de cada canal en una tabla SQLite para cargarse al iniciar el script"
-            "de nuevo.\n",
+        "v0.2.2\n"
+        "   - Se han cambiado los iconos de mute y unmute para que sean mas ilustrativos.\n"
+        "   - Ahora intentamos ahorrarnos la peticion a riot si existe el invocador en la tabla summoners, "
+        "al agregar un nuevo summoner (ya que esa tabla no se borra).\n"
+        "   - Creamos settings.orig.py.\n"
+        "   - Creamos README.md para el repositorio de github (Pendiente de rellenar).\n"
+        "   - Añadida constante con el número de versión.",
 
-            "v0.2.1\n"
-            "   - FIX: Si un invocador se desconectaba seguía apareciendo en la lista de seguimiento.\n"
-            "   - Ahora se puede agregar a varios invocadores de una sola vez. \"/add name1, name2 ...\".\n"
-            "   - Ahora se pueden borrar varios invocadores de una sola vez.\n"
-            "   - Ahora se pueden borrar todos los invocadores con la utilizando \"/del all\".\n"
-            "   - Se ha mejorado el rendimiento general. Menos bucles empleando conjuntos e intersecciones.\n"
-            "   - En las operaciones /add, /del, /mute, /unmute se mostrará la lista de invocadores con los "
-            "cambios en vez de una confirmación genérica.\n"
-            "   - Se ha añadido un nuevo comando (/last_changes) para mostrar los cambios de la última versión.\n"
-            "   - Se ha separado los ajustes de conexión a un archivo aparte para poder ignorarlos en el git.\n"
-            "   - Se ha actualizado los comandos de ayuda (/help) en el propio @LoLTrackerBot y con @FatherBot.\n"
-            "   - Se ha actualizado la descripción en (/description) y con @FatherBot.\n",
+        "v0.2.1\n"
+        "   - FIX: Si un invocador se desconectaba seguía apareciendo en la lista de seguimiento.\n"
+        "   - Ahora se puede agregar a varios invocadores de una sola vez. \"/add name1, name2 ...\".\n"
+        "   - Ahora se pueden borrar varios invocadores de una sola vez.\n"
+        "   - Ahora se pueden borrar todos los invocadores con la utilizando \"/del all\".\n"
+        "   - Se ha mejorado el rendimiento general. Menos bucles empleando conjuntos e intersecciones.\n"
+        "   - En las operaciones /add, /del, /mute, /unmute se mostrará la lista de invocadores con los "
+        "cambios en vez de una confirmación genérica.\n"
+        "   - Se ha añadido un nuevo comando (/last_changes) para mostrar los cambios de la última versión.\n"
+        "   - Se ha separado los ajustes de conexión a un archivo aparte para poder ignorarlos en el git.\n"
+        "   - Se ha actualizado los comandos de ayuda (/help) en el propio @LoLTrackerBot y con @FatherBot.\n"
+        "   - Se ha actualizado la descripción en (/description) y con @FatherBot.",
 
-            "v0.2.2\n"
-            "   - Se han cambiado los iconos de mute y unmute para que sean mas ilustrativos.\n"
-            "   - Ahora intentamos ahorrarnos la peticion a riot si existe el invocador en la tabla summoners, "
-            "al agregar un nuevo summoner (ya que esa tabla no se borra).\n"
-            "   - Creamos settings.orig.py.\n"
-            "   - Creamos README.md para el repositorio de github (Pendiente de rellenar).\n"
-            "   - Añadida constante con el número de versión.",
+        "v0.2.0\n"
+        "    - Versión reconstruida desde cero.\n"
+        "    - Se ha eliminado la función anti-spam por no poder afinarse adecuadamente por falta de datos. "
+        "Ahora se pueden silenciar las notificaciones por invocador o para todos los invocadores del "
+        "canal especifco desde el que se envie la orden /mute <summoner ID> o /mute all\n"
+        "    - Se guardan los ajustes de cada canal en una tabla SQLite para cargarse al iniciar el script"
+        "de nuevo.",
 
-            "v0.2.3\n"
-            "   - Descripción corregida.\n"
-            "   - Añadido soporte para funciones administrativas. Para utilizarlas tan sólo hay que añadir el decorador"
-            "@owner al principio del método.\n"
-            "   - Aplicados estilos de convención PEP 8 en parte del código.\n"
-            "   - Ahora se muestra el campeón que se está jugando.\n"
-            "   - Un campo interno de la base de datos (titulo de conversacion) no se guardaba correctamente al iniciar"
-            "el bot (/start). Esto era debido a que no consideraba que algunos campos pudieran ser opcionales..\n"
-            "   - El diccionario de invocadores de cada chat tendra dos entradas por cada invocador, una con su ID de"
-            "invocador y otra con su nombre normalizado (lowercase sin espacios). Puesto que su valor es un puntero a"
-            "la misma clase, los cambios de una estarán sincronizados con la otra.\n"
-            "   - Las operaciones sobre todos los invocadores todos se pueden hacer con los comodines 'all' y '*'.\n"
-            "   - Mover la lógica de mutear, desmutear y borrar invocadores de un chat a la clase Chat.py.\n"
-            "   - Mas genericas las funciones de Chat.py de get_summoner (quitar get_summoner_by_name y by id).\n"
-            "   - Dejar de mostrar el IDs de invocador, ya que al hacer las operaciones basándonos en el nombre ya"
-            "no debería ser necesario..\n"
-            "   - Poder Mutear/desmutear varios invocadores, pero no todos.\n"
-            "   - Combinar get_tracked_summoners y get_summoners.\n"
-            "   - Se ha cambiado la ayuda del bot para reflejar los cambios en los argumentos realizados (* all etc).\n"
-            ""
+        "v0.1.1\n"
+        "    - Añadido función anti-spam para que no mande mensajes de \"<Summoner> en cola\" continuamente.\n"
+        "    - Parametrizadas unas constantes para hacer mas rapido el despliegue entre entorno de "
+        "desarrollo y producción.",
+
+        "v0.1.0\n" +
+        "    - Release inicial."
     ]
 
     HELP = (
@@ -115,9 +134,14 @@ class LoLTracker:
         "/mute <* | all | name1[, name2..]> - Mutea al especificado o a todos.\n"
         "/unmute <* | all | name1[, name2..]> - Desmutea al especificado o a todos.\n"
 
-        "/chat_id - Imprime el identificador del chat actual.\n"
-        "/stats - .\n"
+        "/say [<msg> to <name>] - Envía un mensaje a un invocador. Sin argumentos activa el modo inline.\n"
+
+        "/chat_id - (\@owner) Imprime el identificador del chat actual.\n"
+        "/stats [extended] - (@owner) Mostar estadísticas básicas del bot.\n"
+        "/restart - (\@owner) Reiniciar el bot."
     )
+
+    MSG_UPDATED = 'LoLTrackerBot actualizado a la versión: {}.\nUtiliza el comando /last_changes para ver los cambios.'
 
     """ Instanciación y configuración de atributos """
     def __init__(self, token, debug_level=logging.INFO):
@@ -131,8 +155,9 @@ class LoLTracker:
         self.logger = logging.getLogger(__name__)
 
         # Atributos del bot de telegram
-        self.token = token     # Token para conectar el bot
-        self.bot = None        # Instancia del bot
+        self.token = token      # Token para conectar el bot
+        self.bot = None         # Instancia del bot
+        self.cbs = {}           # Los métodos de los callbacks
 
         self.summoners = {}
 
@@ -166,6 +191,15 @@ class LoLTracker:
     """ Carga los chats e invocadores asociados a cada uno de ellos. """
     def __load_settings(self):
         self.logger.info('Cargando configuración...')
+
+        query = '''
+        CREATE TABLE IF NOT EXISTS settings(
+            id    INTEGER PRIMARY KEY,
+            last_notified_version TEXT UNIQUE,
+            created DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        '''
+        self.cursor.execute(query)
 
         query = '''
         CREATE TABLE IF NOT EXISTS chats(
@@ -211,9 +245,7 @@ class LoLTracker:
         self.cursor.execute('SELECT id, name FROM chats;')
         results = self.cursor.fetchall()
 
-        for chat in results:
-            # chat[0] -> id , chat[1] -> name
-            self.chats[chat[0]] = Chat(chat[0], chat[1])
+        self.chats = {chat[0]: Chat(chat[0], chat[1]) for chat in results}
 
         self.logger.info('Chats añadidos: {}'.format(len(results)))
 
@@ -234,9 +266,9 @@ class LoLTracker:
         self.logger.info('Configuración aplicada.')
 
     """ Wrapper: Enviar mensaje por un chat de telegram. """
-    def __send_message(self, chat_id, text, reply_markup=None):
+    def __send_message(self, chat_id, text, reply_markup=None, parse_mode=None):
         self.bot.sendChatAction(chat_id=chat_id, action=ChatAction.TYPING)
-        self.bot.sendMessage(chat_id=chat_id, text=text, reply_markup=reply_markup)
+        self.bot.sendMessage(chat_id=chat_id, text=text, reply_markup=reply_markup, parse_mode=parse_mode)
 
     """ Wrapper peticion a la API de riot con RiotWatcher. """
     def __get_summoners(self, names, region=RIOT_REGION):
@@ -270,26 +302,15 @@ class LoLTracker:
 
         return response, error
 
-    """ Devuelve la lista de invocadores en un chat especifico. """
-    def __list_summoners(self, chat_id):
-        result = ''
-        # summoners = self.chats[chat_id].get_tracked_summoners()
-        summoners = self.chats[chat_id].get_summoners()
-
-        for key, summoner in summoners.items():
-            result += "{}\n".format(summoner)
-
-        if not result:
-            result = '-'
-
-        return result
-
     """ Función para conectar el bot a telegram. """
     def connect(self):
         self.lol_chat.connect()
 
         updater = Updater(self.token)
         self.bot = updater.bot
+
+        # Comprobamos si hay una nueva versión del bot. Si es así lo notificamos
+        self.announce_version()
 
         dp = updater.dispatcher
 
@@ -306,16 +327,35 @@ class LoLTracker:
         dp.add_handler(CommandHandler("tracked", self.on_tracked_summoners))
         dp.add_handler(CommandHandler("mute", self.on_mute, pass_args=True))
         dp.add_handler(CommandHandler("unmute", self.on_unmute, pass_args=True))
+        dp.add_handler(CommandHandler("say", self.on_say, pass_args=True))
 
         dp.add_handler(CommandHandler("chat_id", self.on_chat_id))
-        dp.add_handler(CommandHandler("stats", self.on_stats))
+        dp.add_handler(CommandHandler("stats", self.on_stats, pass_args=True))
+        dp.add_handler(CommandHandler("restart", self.on_restart))
 
-        dp.add_handler(CallbackQueryHandler(self.on_send_wait))
+        dp.add_handler(CallbackQueryHandler(self.on_callback))
+        self.cbs['send_wait'] = self.cb_send_wait
+
+        dp.add_handler(InlineQueryHandler(self.on_inlinequery))
 
         dp.add_error_handler(self.on_error)
 
         updater.start_polling()
         updater.idle()
+
+    """ Comprueba si se notifico la actualización a la última version. En caso de no haberse notificado envía
+    un mensaje a cada chat almacenado."""
+    def announce_version(self):
+        self.cursor.execute('SELECT COUNT(*) FROM settings WHERE last_notified_version = (?);', (self.VERSION,))
+        count = self.cursor.fetchone()[0]
+
+        if not count:
+            self.cursor.execute('INSERT INTO settings (last_notified_version) VALUES (?);', (self.VERSION,))
+            self.conn.commit()
+            for _, chat in self.chats.items():
+                self.__send_message(chat.id, self.MSG_UPDATED.format(self.VERSION))
+
+            self.logger.info('Versión {} anunciada.'.format(self.VERSION))
 
     """ Método que loguea cuando haya algún error con el procesamiento de algún mensaje. """
     def on_error(self, _, update, error):
@@ -381,12 +421,13 @@ class LoLTracker:
     """ Envía el log de cambios. """
     def on_changelog(self, _, update):
         chat_id = update.message.chat_id
-        self.__send_message(chat_id, ''.join(LoLTracker.CHANGELOG))
+        for change in self.CHANGELOG:
+            self.__send_message(chat_id, change)
 
     """ Envía los cambios de la última versión. """
     def on_last_changes(self, _, update):
         chat_id = update.message.chat_id
-        self.__send_message(chat_id, LoLTracker.CHANGELOG[-1])
+        self.__send_message(chat_id, LoLTracker.CHANGELOG[0])
 
     """ Añade uno o varios invocadores en caso de que la API de riot los devuelva. """
     def on_add_summoner(self, _, update, args):
@@ -395,6 +436,7 @@ class LoLTracker:
             return
 
         chat_id = update.message.chat_id
+        chat = self.chats[chat_id]
 
         # Tenemos en cuenta los nombres con espacios.
         summoner_names = ' '.join(args).split(', ')
@@ -433,12 +475,9 @@ class LoLTracker:
 
         for _, summoner in summoners.items():
             # Si el invocador al que se quiere hacer el seguimiento no esta agregado como amigo al chat
-            if summoner['id'] not in self.lol_chat.roster:
+            if summoner['id'] not in self.lol_chat.roster_ids:
                 not_subscribed.append(summoner['name'])
                 self.lol_chat.add_friend('sum{}@pvp.net'.format(summoner['id']))
-
-            # Comprobamos si el invocador ya ha sido agregado
-            chat = self.chats[chat_id]
 
             # Sino ha sido agregado lo hacemos y notificamos
             if not chat.has_summoner(summoner['id']) and chat.add_summoner(summoner['id'], summoner['name']):
@@ -474,7 +513,7 @@ class LoLTracker:
         if added:
             self.logger.info('Invocador {} añadidos al chat {}.'.format(added, chat_id))
 
-        self.__send_message(chat_id, self.__list_summoners(chat_id))
+        self.__send_message(chat_id, chat.list_summoners())
 
     """ Borra el seguimiento del invocador en el canal desde el que se envia el mensaje. """
     def on_del_summoner(self, _, update, args):
@@ -498,14 +537,14 @@ class LoLTracker:
         )
 
         self.conn.commit()
-        self.logger.info('Invocador: {} borrado del chat {}.'.format(summoner_names, chat_id))
-        self.__send_message(chat_id, self.__list_summoners(chat_id))
+        self.logger.info('Invocador: {} borrado del chat {}.'.format(summoner_names, self.chats[chat_id].name))
+        self.__send_message(chat_id, chat.list_summoners())
 
     """ Envía un mensaje con los invocadores en seguimiento. """
     def on_list_summoners(self, _, update):
         chat_id = update.message.chat_id
 
-        self.__send_message(chat_id, self.__list_summoners(chat_id))
+        self.__send_message(chat_id, self.chats[chat_id].list_summoners())
 
     """ Envía un mensaje con el estado de los invocadores en seguimiento. """
     def on_tracked_summoners(self, _, update):
@@ -544,7 +583,7 @@ class LoLTracker:
 
         self.conn.commit()
 
-        self.__send_message(chat_id, self.__list_summoners(chat_id))
+        self.__send_message(chat_id, chat.list_summoners())
 
     """ Desmutear las notificaciones de un invocador en un canal específico. """
     def on_unmute(self, _, update, args):
@@ -567,19 +606,115 @@ class LoLTracker:
 
         self.conn.commit()
 
-        self.__send_message(chat_id, self.__list_summoners(chat_id))
+        self.__send_message(chat_id, chat.list_summoners())
 
-    """ Se encarga de enviar el mensaje de 'Espera' al chat del LoL. """
-    def on_send_wait(self, bot, update):
+    """  """
+    def on_say(self, _, update, args):
+        chat_id = update.message.chat_id
+        chat = self.chats[chat_id]
+
+        if len(args) == 0:
+            # summoners = chat.get_summoners()
+            # output = "Elige invocador con el que hablar: "
+            # btns = [InlineKeyboardButton(
+            #     summoner.name,
+            #     switch_inline_query_current_chat=''
+            # ) for _, summoner in summoners.items()]
+            # ReplyKeyboardMarkup
+            # reply_markup = InlineKeyboardMarkup(
+            #     utils.build_menu(btns, n_cols=4),
+            #     resize_keyboard=True, one_time_keyboard=True
+            # )
+            output = 'Crea un nuevo mensaje: '
+            reply_markup = InlineKeyboardMarkup(
+                [[InlineKeyboardButton(
+                    'Crear mensaje',
+                    switch_inline_query_current_chat=''
+                )]],
+                resize_keyboard=True, one_time_keyboard=True
+            )
+
+        else:
+            # El invocador que buscar para enviar el mensaje
+            slug = args[-1]
+            s = chat.get_summoners([slug])
+            if s:
+                msg = ' '.join(args[:-2])
+                summoner = list(s.values())[0]
+                output = 'Enviando mensaje "{}" a {}.'.format(msg, summoner.name)
+
+                name = update.message.from_user.username or update.message.from_user.first_name
+
+                self.lol_chat.send_message(
+                    mto='sum{}@pvp.net'.format(summoner.id),
+                    mbody=name + ': ' + msg
+                )
+            else:
+                output = 'Invocador no encontrado. Agrégale primero con /add'
+
+            reply_markup = None
+
+        self.__send_message(chat_id, output, reply_markup=reply_markup)
+
+    """ Devuelve el ID del chat. """
+    @owner
+    def on_chat_id(self, _, update):
+        chat_id = update.message.chat_id
+        self.__send_message(chat_id, str(chat_id))
+
+    """ Estadísticas básicas del bot para el dueño. """
+    @owner
+    def on_stats(self, _, update, args):
+        chat_id = update.message.chat_id
+
+        self.cursor.execute('SELECT COUNT(DISTINCT(chat_id)), COUNT(DISTINCT(summoner_id)) FROM chats_summoners;')
+        r = self.cursor.fetchone()
+        n_chats = r[0]
+        n_summoners = r[1]
+
+        self.cursor.execute('SELECT COUNT(*) FROM summoners;')
+        t_summoners = self.cursor.fetchone()[0]
+
+        msg = 'Se hace seguimiento a {} invocadores en {} chats.\n' \
+              'Invocadores totales almacenados: {}.'.format(n_summoners, n_chats, t_summoners)
+
+        if len(args) == 1 and 'extended' in args:
+
+            for chat_id in self.chats:
+                chat = self.chats[chat_id]
+                summoners = chat.get_summoners()
+                summoners = [summoner.name for _, summoner in summoners.items()]
+                msg += "\n{}: {}".format(chat.name, ', '.join(summoners))
+
+        self.__send_message(chat_id, msg)
+
+    """ Reiniciar el bot """
+    @owner
+    def on_restart(self, _, update):
+        chat_id = update.message.chat_id
+        self.__send_message(chat_id, "Bot is restarting...")
+        time.sleep(0.2)
+
+        os.execl(sys.executable, sys.executable, *sys.argv)
+
+    """ Manejador para distintas funciones de callback. """
+    def on_callback(self, bot, update):
+        data = json.loads(update.callback_query.data, encoding='utf-8')
+        if 'action' in data and data['action'] in self.cbs:
+            self.cbs[data['action']](bot, update)
+
+    """ Función callback que se encarga de enviar el mensaje de 'Espera' al chat del LoL. """
+    def cb_send_wait(self, bot, update):
         query = update.callback_query
         chat_id = query.message.chat_id
 
-        summoner_id = int(query.data)
+        data = json.loads(query.data, encoding='utf-8')
+        summoner_id = data['data']['id']
 
         summoner = self.chats[chat_id].get_summoners([summoner_id])
         summoner = summoner[summoner_id]
 
-        jid = 'sum' + str(summoner.id) + '@pvp.net'
+        jid = 'sum{}@pvp.net'.format(summoner.id)
 
         if query.from_user.username:
             name = query.from_user.username
@@ -603,24 +738,24 @@ class LoLTracker:
             parse_mode=ParseMode.HTML
         )
 
-    """ Devuelve el ID del chat. """
-    @owner
-    def on_chat_id(self, _, update):
-        chat_id = update.message.chat_id
-        self.__send_message(chat_id, str(chat_id))
+    """ Método que maneja el inline mode del bot. Se encarga de enviar la lista invocadores de un chat específico
+    o de generar un comando para llamar a la función de envío de mensajes /say <mensaje> to <invocador>. Se la invoca
+    poniendo @nombre_del_bot en el chat. """
+    def on_inlinequery(self, _, update):
+        chat_id = update.inline_query.from_user.id
 
-    """ Estadísticas básicas del bot para el dueño. """
-    @owner
-    def on_stats(self, _, update):
-        chat_id = update.message.chat_id
+        query = update.inline_query.query
 
-        self.cursor.execute('SELECT COUNT(*) FROM summoners;')
-        n_summoners = self.cursor.fetchone()[0]
+        summoners = self.chats[chat_id].get_summoners()
 
-        self.cursor.execute('SELECT COUNT(*) FROM chats;')
-        n_chats = self.cursor.fetchone()[0]
+        if query:
+            results = [InlineQueryResultArticle(
+                id=uuid4(),
+                title=summoner.name,
+                input_message_content=InputTextMessageContent('/say ' + query + ' to ' + summoner.slug())
+            ) for _, summoner in summoners.items()]
 
-        self.__send_message(chat_id, 'Se hace seguimiento a {} invocadores en {} chats.'.format(n_summoners, n_chats))
+            update.inline_query.answer(results, cache_time=0)
 
     """ Cuando cambie el estado de algún invocador que tenemos en el chat, comprobamos si es un invocador
     que tenemos en seguimiento en alguno de los chats abiertos. Si lo está se realizarán distintas acciones
@@ -633,7 +768,7 @@ class LoLTracker:
         'inGame'                => 
         'hostingPracticeGame'   => 
         'hostingNormalGame'     => 
-        'hostingRankedGame'     => 
+        'hostingRankedGame'     =>
     """
     def xmpp_on_changed_status(self, presence):
         # Si el stanza que recibimos no tiene remitente pasamos del tema
@@ -668,19 +803,21 @@ class LoLTracker:
                     if soup.body.timestamp:
                         summoner.timestamp = soup.body.timestamp.text
 
-                    # if soup.body.championid in self.champions:
-                    #     summoner.champion = self.champions[int(soup.body.championid.text)]
-
-                    if soup.body.gamestatus.text == 'inQueue':
+                    if soup.body.gamestatus and soup.body.gamestatus.text == 'inQueue':
                         # Guardamos su estado en su summoner correspondiente
-                        summoner.gamequeuetype = soup.body.gamequeuetype.text
+                        # summoner.gamequeuetype = soup.body.gamequeuetype.text
                         summoner.timestamp = soup.body.timestamp
 
                         # Si se puede notificar sobre este invocador
                         # Preparamos la notificación y el botón para avisar por el chat
                         if summoner.noticeable:
-
-                            keyboard = [[InlineKeyboardButton('¡Espérame que juego!', callback_data=str(summoner.id))]]
+                            keyboard = [[InlineKeyboardButton(
+                                '¡Espérame que juego!',
+                                callback_data=json.dumps(
+                                    {'action': "send_wait", 'data': {'id': summoner.id}},
+                                    sort_keys=True
+                                )
+                            )]]
                             markup = InlineKeyboardMarkup(keyboard)
 
                             self.__send_message(
@@ -693,8 +830,13 @@ class LoLTracker:
                         # Delete message send in 'inQueue' state
                         pass
 
-                    elif soup.body.gamestatus.text == 'inGame' and soup.body.championid:
-                        summoner.champion = self.champions.get(int(soup.body.championid.text), None)
+                    elif soup.body.gamestatus.text == 'inGame' and (soup.body.championid or soup.body.skinname):
+                        # Los clientes antiguos no tienen un campo "championID" solo se puede deducir el campeón
+                        # a partir de otro campo: skinname
+                        try:
+                            summoner.champion = self.champions.get(int(soup.body.championid.text), None)
+                        except AttributeError:
+                            summoner.champion = soup.body.skinname.text
 
 if __name__ == '__main__':
     lt = LoLTracker(token=TG_TOKEN)

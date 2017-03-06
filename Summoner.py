@@ -11,7 +11,7 @@ class Summoner:
         self.id = id
         self.name = name
         self.noticeable = noticeable
-        
+
         # Estos no
         self.gamestatus = None
         self.gamequeuetype = None
@@ -31,7 +31,10 @@ class Summoner:
                 status += ": {}\n".format(self.gamestatus)
             
         return status
-        
+
+    def slug(self):
+        return self.name.replace(' ', '').lower()
+
     def __str__(self):
         # return '{} {} ({})'.format('🔔' if self.noticeable else '🔕', self.name, self.id)
         return '{} {}'.format('🔔' if self.noticeable else '🔕', self.name)

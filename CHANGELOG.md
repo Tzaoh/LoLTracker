@@ -1,3 +1,20 @@
+v0.2.4
+---
+* Nuevo método para reiniciar el bot, sólo disponible para el dueño @owner.
+* Corregido mensaje de estadísticas y añadidas estadísticas extras utilizando el argumento extended.
+* Decoradores pasados a un archivo externo.
+* Se ha creado un nuevo decorador de funciones para ejecutarlas sólo si son llamadas desde en sólo en chats privados (no en grupos).
+* Método __list_summoners eliminado.
+* Manejador para diferentes eventos de callbacks.
+* Nuevo archivo utils.py para separar funciones auxiliares.
+* Se ha corregido un error por el que no aparecía el nombre del campeón de un jugador que estuviera en partida mediante
+el comando /tracked. Esto era debido a que el campo que informaba del campeón no existe en la versión del cliente antigua.
+Ahora se utilizará un campo distinto en la versión antigua del cliente.
+* Ahora se puede hablar con un invocador al que se hace seguimiento mediante el comando /say o en modo inline.
+* Ahora se proporciona en la descripción de los correspondientes comandos si son de uso privado (no en conversaciones de grupo) o sólo por el owner.
+* Alguna forma para notificar automaticamente en todos los canales cuando la nueva versión y sus cambios.
+* Ahora al enviar el log de cambios se envia un mensaje por cada version, ya que todos juntos supera la longitud máxima de 4096 bytes.
+
 v0.2.3
 ---
 * Descripción corregida.

@@ -32,12 +32,12 @@ Screenshots:
 
 TODOs:
 ---
-* Algunas colas no se ven reflejadas porque su gamequeuetype es <gamequeuetype>NONE</gamequeuetype> (cola de entrenamiento)
-* Separar el método decorador a una nueva clase
+* Argumentos en changelog para imprimir los logs de una versión específica
+* No boton por cada invocador en modo online
 * Al añadir un nuevo invocador, no busca su estado, solo cuando cambia
+* OrderedDict para mostrar los invocadores al listarlos siempre en el mismo orden
+* Comprobar que nos hayan aceptado como contacto. (Nuevo campo en tabla)
 * Argumento opcional en el método de stats para detalles extensos.
-* Quizás estaría un poco mejor la parte de los invocadores cacheados (self.summoners) en el método __load_settings().
-* Alguna forma para notificar automaticamente en todos los canales cuando la nueva versión y sus cambios.
 * Funcionalidad de Borrar mensaje de aviso de en cola cuando lo implementen en la API BOT de telegram. L(392)
 * SPAM(?)
-* Como dar de baja conversaciones
+* Evento on_suscribed

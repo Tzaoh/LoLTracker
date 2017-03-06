@@ -34,7 +34,8 @@ class Chat:
         summoner_names = [name.replace(' ', '').lower() for name in summoner_names]
 
         if summoner_names[0] in ['*', 'all']:
-            summoners_deleted = self.__tracked_summoners
+            summoners_deleted = {key: summoner for key, summoner in self.__tracked_summoners.items()
+                                 if isinstance(key, int)}
             self.__tracked_summoners = {}
         else:
             summoners_deleted = self.get_summoners(summoner_names)
@@ -49,7 +50,21 @@ class Chat:
                   key in keys}
 
         return result
-    
+
+    """ Devuelve la lista de invocadores en un chat especifico. """
+    def list_summoners(self):
+        result = ''
+
+        summoners = self.get_summoners()
+
+        for key, summoner in summoners.items():
+            result += "{}\n".format(summoner)
+
+        if not result:
+            result = '-'
+
+        return result
+
     def has_summoner(self, key):
         return key in self.__tracked_summoners
 
@@ -71,7 +86,6 @@ class Chat:
         summoner_names = [name.replace(' ', '').lower() for name in summoner_names]
 
         if summoner_names[0] in ['*', 'all']:
-            # summoners_unmuted = self.get_tracked_summoners()
             summoners_unmuted = self.get_summoners()
         else:
             summoners_unmuted = self.get_summoners(summoner_names)
