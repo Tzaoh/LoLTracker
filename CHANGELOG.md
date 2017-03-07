@@ -1,3 +1,8 @@
+v0.2.5
+---
+* Corregido un error que hacía que se enviase las estadísticas a un canal distinto del que las había pedido.
+* Corregidos algunos errores tipográficos con los mensajes de descripción y la ayuda de comandos.
+
 v0.2.4
 ---
 * Nuevo método para reiniciar el bot, sólo disponible para el dueño @owner.
